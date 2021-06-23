@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/deckarep/golang-set"
+	mapset "github.com/deckarep/golang-set"
 	kubewarden_testing "github.com/kubewarden/policy-sdk-go/testing"
 )
 
-func TestEmptySettingsLeadsToApproval(t *testing.T) {
+func TestEmptySettingsLeadsToRequestAccepted(t *testing.T) {
 	settings := Settings{}
 
 	payload, err := kubewarden_testing.BuildValidationRequest(
@@ -27,15 +27,22 @@ func TestEmptySettingsLeadsToApproval(t *testing.T) {
 	if err := json.Unmarshal(responsePayload, &response); err != nil {
 		t.Errorf("Unexpected error: %+v", err)
 	}
-
 	if response.Accepted != true {
 		t.Error("Unexpected rejection")
 	}
 }
 
-func TestApproval(t *testing.T) {
+func TestRequestAccepted(t *testing.T) {
+	constrainedLabels := make(map[string]*RegularExpression)
+	re, err := CompileRegularExpression(`^world-`)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+	constrainedLabels["hello"] = re
+
 	settings := Settings{
-		DeniedNames: mapset.NewThreadUnsafeSetFromSlice([]interface{}{"foo", "bar"}),
+		DeniedLabels:      mapset.NewThreadUnsafeSetFromSlice([]interface{}{"bad1", "bad2"}),
+		ConstrainedLabels: constrainedLabels,
 	}
 
 	payload, err := kubewarden_testing.BuildValidationRequest(
@@ -60,9 +67,52 @@ func TestApproval(t *testing.T) {
 	}
 }
 
-func TestRejection(t *testing.T) {
+func TestAcceptRequestWithConstraintLabel(t *testing.T) {
+	constrainedLabels := make(map[string]*RegularExpression)
+	//re, err := CompileRegularExpression(`^team-`)
+	re, err := CompileRegularExpression(`^some-`)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err)
+	}
+	constrainedLabels["owner"] = re
 	settings := Settings{
-		DeniedNames: mapset.NewThreadUnsafeSetFromSlice([]interface{}{"foo", "tls-example-ingress"}),
+		DeniedLabels:      mapset.NewThreadUnsafeSetFromSlice([]interface{}{"bad1", "bad2"}),
+		ConstrainedLabels: constrainedLabels,
+	}
+
+	payload, err := kubewarden_testing.BuildValidationRequest(
+		"test_data/ingress.json",
+		&settings)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+
+	responsePayload, err := validate(payload)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+
+	var response kubewarden_testing.ValidationResponse
+	if err := json.Unmarshal(responsePayload, &response); err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+
+	if response.Accepted != true {
+		t.Error("Unexpected rejection")
+	}
+}
+
+func TestRejectionBecauseDeniedLabel(t *testing.T) {
+	constrainedLabels := make(map[string]*RegularExpression)
+	re, err := CompileRegularExpression(`^world-`)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+	constrainedLabels["hello"] = re
+
+	settings := Settings{
+		DeniedLabels:      mapset.NewThreadUnsafeSetFromSlice([]interface{}{"owner"}),
+		ConstrainedLabels: constrainedLabels,
 	}
 
 	payload, err := kubewarden_testing.BuildValidationRequest(
@@ -83,10 +133,50 @@ func TestRejection(t *testing.T) {
 	}
 
 	if response.Accepted != false {
-		t.Error("Unexpected approval")
+		t.Error("Unexpected accept response")
 	}
 
-	expected_message := "The 'tls-example-ingress' name is on the deny list"
+	expectedMessage := "Label owner is on the deny list"
+	if response.Message != expectedMessage {
+		t.Errorf("Got '%s' instead of '%s'", response.Message, expectedMessage)
+	}
+}
+
+func TestRejectionBecauseConstrainedLabelNotValid(t *testing.T) {
+	constrainedLabels := make(map[string]*RegularExpression)
+	re, err := CompileRegularExpression(`^cc-\d+$`)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+	constrainedLabels["cc-center"] = re
+
+	settings := Settings{
+		DeniedLabels:      mapset.NewThreadUnsafeSetFromSlice([]interface{}{}),
+		ConstrainedLabels: constrainedLabels,
+	}
+
+	payload, err := kubewarden_testing.BuildValidationRequest(
+		"test_data/ingress.json",
+		&settings)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+
+	responsePayload, err := validate(payload)
+	if err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+
+	var response kubewarden_testing.ValidationResponse
+	if err := json.Unmarshal(responsePayload, &response); err != nil {
+		t.Errorf("Unexpected error: %+v", err)
+	}
+
+	if response.Accepted != false {
+		t.Error("Unexpected accept response")
+	}
+
+	expected_message := "The value of cc-center doesn't pass user-defined constraint"
 	if response.Message != expected_message {
 		t.Errorf("Got '%s' instead of '%s'", response.Message, expected_message)
 	}

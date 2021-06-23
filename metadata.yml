@@ -1,18 +1,23 @@
 rules:
-- apiGroups: [""]
-  apiVersions: ["v1"]
-  resources: ["pods"]
-  operations: ["CREATE"]
+- apiGroups: ["*"]
+  apiVersions: ["*"]
+  resources: ["*"]
+  operations: ["*"]
 mutating: false
-contextAware: false
 annotations:
-  io.kubewarden.policy.title: policy-name
-  io.kubewarden.policy.description: Short description
-  io.kubewarden.policy.author: policy-author
-  io.kubewarden.policy.url: https://github.com/yourorg/policy-name
-  io.kubewarden.policy.source: https://github.com/yourorg/policy-name
+  io.kubewarden.policy.title: palindromify
+  io.kubewarden.policy.description: Allows you to reject palindrome names in resources and namespace names, or to only accept palindrome names
+  io.kubewarden.policy.author: Name Surname <name.surname@example.com>
+  io.kubewarden.policy.url: https://github.com/<org>/palindromify
+  io.kubewarden.policy.source: https://github.com/<org>/palindromify
   io.kubewarden.policy.license: Apache-2.0
   io.kubewarden.policy.usage: |
-    Long explaination.
+    This is markdown text and as such allows you to define a free form usage text.
 
-    **Note well:** this can be Markdown text
+    This policy allows you to reject requests if:
+    - The name of the resource is a palindrome name.
+    - The namespace name where this resource is created has a palindrome name.
+
+    This policy accepts the following settings:
+
+    - `invert_behavior`: bool that inverts the policy behavior. If enabled, only palindrome names will be accepted.

@@ -1,4 +1,4 @@
-module github.com/kubewarden/go-policy-template
+module github.com/y-taka-23/kubewarden-go-example
 
 go 1.15
 
