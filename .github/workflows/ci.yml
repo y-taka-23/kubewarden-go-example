@@ -60,7 +60,7 @@ jobs:
       #############################
       - name: annotate policy
         run: |
-          ./kwctl annotate ${{ env.WASM_BINARY_NAME }} --metadata-path metadata.yaml --output-path annotated.wasm
+          ./kwctl annotate ${{ env.WASM_BINARY_NAME }} --metadata-path metadata.yml --output-path annotated.wasm
           mv annotated.wasm policy.wasm
 
       #############################
