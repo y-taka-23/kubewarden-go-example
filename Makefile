@@ -4,9 +4,6 @@ wasm: go.mod go.sum *.go
 test:
 	go test -v
 
-e2e-tests:
-	bats e2e.bats
-
 .PHONY: clean
 clean:
 	go clean

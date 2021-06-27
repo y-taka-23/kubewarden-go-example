@@ -69,8 +69,7 @@ func TestRequestAccepted(t *testing.T) {
 
 func TestAcceptRequestWithConstraintLabel(t *testing.T) {
 	constrainedLabels := make(map[string]*RegularExpression)
-	//re, err := CompileRegularExpression(`^team-`)
-	re, err := CompileRegularExpression(`^some-`)
+	re, err := CompileRegularExpression(`^team-`)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}

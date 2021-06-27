@@ -1,5 +1,0 @@
-{
-  "requireTLS": true,
-  "allowPorts": [443],
-  "denyPorts": [],
-}
